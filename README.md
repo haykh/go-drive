@@ -5,10 +5,10 @@ tui for Google Drive in `Go`
 ## usage
 
 1. you will first need to configure a Google Cloud project. follow instructions [from here](https://developers.google.com/workspace/drive/api/quickstart/go) to set it up
-  - make a Cloud project
-  - enable Google Drive API for the project
-  - create a OAuth client picking "Desktop app" as the application type
-  - you will need the `credentials.json` file (the actual name is different, so you'll need to rename it)
+    - make a Cloud project
+    - enable Google Drive API for the project
+    - create a OAuth client picking "Desktop app" as the application type
+    - you will need the `credentials.json` file (the actual name is different, so you'll need to rename it)
 2. put the `credentials.json` file to `$HOME/.config/godrive/` (alternatively, you may pass a different path in the command line arguments to the app)
 3. authenticate once using `go-drive auth`; this produces a `token.json` file in the same `$HOME/.config/godrive/` directory which is then used each time you make API calls
 4. the filesystem can be accessed interactively via `go-drive fs`
