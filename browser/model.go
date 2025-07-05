@@ -66,7 +66,7 @@ func (m browserModel) loadNewFileList() tea.Cmd {
 	return tea.Batch(
 		m.spinner.Tick,
 		func() tea.Msg {
-			filelist, err := newFileList(m.srv, strings.Join(m.cwd, ""), m.debug_mode)
+			filelist, err := newFileList(m.srv, m.CWD(), m.debug_mode)
 			return doneLoadingMsg{filelist, err}
 		},
 	)
@@ -97,6 +97,9 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.list.SetDelegate(itemRenderer{m.filelist, m.format})
 		m.list.SetItems(fileListToItems(m.filelist))
 		m.list.Title = m.CWD()
+		if m.list.Title == "" {
+			m.list.Title = "/"
+		}
 		m.loading = false
 
 	case spinner.TickMsg:
