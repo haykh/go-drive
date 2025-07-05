@@ -24,6 +24,6 @@ tui for Google Drive in `Go`
 
 even though this project is aimed to make working with Google Drive easier, in no way do i endorse using Google Drive in general. i can think of myriads of reasons on why not to use Google Drive, some of which are outlined [in this article](https://proton.me/blog/is-google-drive-secure). there are plenty of alternatives ranging from fully open-source and even self-hosted to proprietary. the reasons i targeted Google Drive is:
 - they provide a free API support (something, say, Proton Drive lacks);
-- their free tier has 15 GB of space, which i don't believe any of other services match;
+- their free tier has 15 GB of space, which i don't believe any of other services match.
 
 in other words: unless you absolutely have to, do NOT use Google Drive. and for gods sake, definitely don't buy their paid tier.
