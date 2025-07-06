@@ -65,10 +65,26 @@ func Stringize(f FileItem, path string) string {
 		case "icon":
 			item_str = appendColumn(item_str, icon, 2, lipgloss.Left, style)
 		case "sync":
-			if f.IsRemote() && !f.IsDirectory() {
-				item_str = appendColumn(item_str, "", 2, lipgloss.Left, style)
+			if f.IsDirectory() {
+				if f.IsRemote() && f.IsLocal() {
+					item_str = appendColumn(item_str, " ", 2, lipgloss.Left, style)
+				} else if f.IsRemote() {
+					item_str = appendColumn(item_str, "", 2, lipgloss.Left, style)
+				} else if f.IsLocal() {
+					item_str = appendColumn(item_str, "", 2, lipgloss.Left, style)
+				} else {
+					panic("file is neither remote nor local")
+				}
 			} else {
-				item_str = appendColumn(item_str, "", 2, lipgloss.Left, style)
+				if f.IsRemote() && f.IsLocal() {
+					item_str = appendColumn(item_str, "󰅟", 2, lipgloss.Left, style)
+				} else if f.IsRemote() {
+					item_str = appendColumn(item_str, "", 2, lipgloss.Left, style)
+				} else if f.IsLocal() {
+					item_str = appendColumn(item_str, "", 2, lipgloss.Left, style)
+				} else {
+					panic("file is neither remote nor local")
+				}
 			}
 		case "name":
 			name := f.GetName()

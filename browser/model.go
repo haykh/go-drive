@@ -58,9 +58,6 @@ type browserModel struct {
 
 	// ui configurations
 	keys keyMap
-
-	// choice    string
-	// choiceIdx int
 }
 
 func (m browserModel) CWD() string {
@@ -154,5 +151,5 @@ func (m browserModel) View() string {
 		m.list.Title = fmt.Sprintf("%s loading %s...", m.spinner.View(), m.CWD())
 		m.list.Styles.Title = lipgloss.NewStyle().MarginLeft(2)
 	}
-	return "\n" + m.list.View() + "\n" + m.help.View(m.keys)
+	return "\n" + m.list.View() + "\n" + helpStyle.Render(m.help.View(m.keys))
 }

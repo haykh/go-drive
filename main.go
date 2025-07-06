@@ -48,12 +48,6 @@ func main() {
 			Usage:   "path to the Google Drive token file",
 		},
 		&cli.StringFlag{
-			Name:    "syncmap",
-			Aliases: []string{"s"},
-			Value:   filepath.Join(home, ".config", "godrive", "syncmap.json"),
-			Usage:   "sync map between local and remote filesystems",
-		},
-		&cli.StringFlag{
 			Name:    "local",
 			Aliases: []string{"l"},
 			Value:   filepath.Join(home, ".config", "godrive", "storage"),
@@ -102,8 +96,8 @@ func main() {
 				},
 			},
 			{
-				Name:  "remote",
-				Usage: "open file picker in the remote directory",
+				Name:  "cd",
+				Usage: "open file picker with a dual view (remote and local)",
 				Flags: common_flags,
 				Action: func(ctx context.Context, c *cli.Command) error {
 					debug_mode := c.Bool("debug")
@@ -115,22 +109,8 @@ func main() {
 					if srv, err := api.GetGoogleDriveService(ctx, c.String("credentials"), c.String("token"), drive.DriveScope, false); err != nil {
 						return utils.ToHumanReadableError(err, debug_mode)
 					} else {
-						return api.RemoteFileBrowser(srv, c.String("syncmap"), dir, debug_mode)
+						return api.DualFileBrowser(srv, c.String("local"), dir, debug_mode)
 					}
-				},
-			},
-			{
-				Name:  "local",
-				Usage: "open file picker in the local mirror directory",
-				Flags: common_flags,
-				Action: func(ctx context.Context, c *cli.Command) error {
-					debug_mode := c.Bool("debug")
-					initLogger(debug_mode)
-					dir := ""
-					if c.NArg() > 0 {
-						dir = c.Args().Get(0)
-					}
-					return api.LocalFileBrowser(c.String("syncmap"), c.String("local"), dir, debug_mode)
 				},
 			},
 		},

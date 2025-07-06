@@ -1,10 +1,10 @@
 package api
 
 import (
-	"fmt"
 	"go-drive/browser"
-	"go-drive/local"
-	"go-drive/remote"
+	"go-drive/filesystem"
+	"go-drive/filesystem/local"
+	"go-drive/filesystem/remote"
 	"go-drive/ui"
 	"go-drive/utils"
 	"strings"
@@ -32,17 +32,23 @@ func RemoteLs(srv *drive.Service, dir string, debug_mode bool) error {
 	}
 }
 
-func RemoteFileBrowser(srv *drive.Service, syncmap_path, dir string, debug_mode bool) error {
-	// if _, err := getSyncmap(srv, syncmap_path, debug_mode); err != nil {
-	// 	return err
-	// } else {
-	return browser.FileBrowser(&remote.Manager{Srv: srv}, dir, debug_mode)
-	// }
-}
+// func RemoteFileBrowser(srv *drive.Service, dir string, debug_mode bool) error {
+// 	return browser.FileBrowser(&remote.Manager{Srv: srv}, dir, debug_mode)
+// }
 
-func LocalFileBrowser(syncmap_path, root, dir string, debug_mode bool) error {
-	fmt.Printf("DIRECTORY IS %s\n", dir)
-	return browser.FileBrowser(&local.Manager{Root: root}, dir, debug_mode)
+// func LocalFileBrowser(local_root, dir string, debug_mode bool) error {
+// 	return browser.FileBrowser(&local.Manager{Root: local_root}, dir, debug_mode)
+// }
+
+func DualFileBrowser(srv *drive.Service, local_root, dir string, debug_mode bool) error {
+	return browser.FileBrowser(
+		&filesystem.DualManager{
+			LocalManager:  &local.Manager{Root: local_root},
+			RemoteManager: &remote.Manager{Srv: srv},
+		},
+		dir,
+		debug_mode,
+	)
 }
 
 // func getSyncmap(srv *drive.Service, syncmap_path string, debug_mode bool) (*SyncMap, error) {
