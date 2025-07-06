@@ -38,7 +38,7 @@ func getFolderContent(path string) ([]*File, utils.APIError) {
 			files = append(files, &File{
 				Path:         path,
 				Name:         entry.Name(),
-				Size:         filesize,
+				Size:         uint64(filesize),
 				ModifiedTime: modtime,
 				MimeType:     mime_type,
 			})

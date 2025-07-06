@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 )
 
-var RecognizedFormats = []string{}
-
 var _ utils.FileItem = &File{}
 var _ utils.FileManager = &Manager{}
 
@@ -35,7 +33,7 @@ func (m Manager) GetFileList(path string, debug_mode bool) ([]utils.FileItem, er
 type File struct {
 	Path         string
 	Name         string
-	Size         int64
+	Size         uint64
 	ModifiedTime string
 	MimeType     string
 }
@@ -48,10 +46,34 @@ func (f File) IsPDF() bool {
 	return f.MimeType == "application/pdf"
 }
 
+func (f File) IsUnrecognized() bool {
+	return f.MimeType == "other"
+}
+
+func (f File) IsLocal() bool {
+	return true
+}
+
+func (f File) IsRemote() bool {
+	return false
+}
+
 func (f File) GetName() string {
 	return f.Name
 }
 
+func (f File) GetSize() uint64 {
+	return f.Size
+}
+
+func (f File) GetModifiedTime() string {
+	return f.ModifiedTime
+}
+
 func (f File) GetMimeType() string {
 	return f.MimeType
+}
+
+func (f File) GetOwnedByMe() bool {
+	return true
 }

@@ -1,27 +1,11 @@
 package remote
 
 import (
+	"go-drive/ui"
 	"go-drive/utils"
 
 	"google.golang.org/api/drive/v3"
 )
-
-var RecognizedFormats = []string{
-	"application/vnd.google-apps.folder",
-	"application/vnd.google.colaboratory",
-	"application/vnd.google-apps.document",
-	"application/vnd.google-apps.spreadsheet",
-	"application/vnd.google-apps.presentation",
-	"application/pdf",
-	"application/msword",
-	"application/zip",
-	"video/mp4",
-	"image/png",
-	"image/jpeg",
-	"image/gif",
-	"other",
-	"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-}
 
 var _ utils.FileItem = &File{}
 var _ utils.FileManager = &Manager{}
@@ -60,10 +44,38 @@ func (f File) IsPDF() bool {
 	return f.MimeType == "application/pdf"
 }
 
+func (f File) IsUnrecognized() bool {
+	if _, ok := ui.MimeIcons[f.MimeType]; !ok {
+		return true
+	} else {
+		return f.MimeType == "other"
+	}
+}
+
+func (f File) IsLocal() bool {
+	return false
+}
+
+func (f File) IsRemote() bool {
+	return true
+}
+
 func (f File) GetName() string {
 	return f.Name
 }
 
+func (f File) GetSize() uint64 {
+	return uint64(f.Size)
+}
+
 func (f File) GetMimeType() string {
 	return f.MimeType
+}
+
+func (f File) GetModifiedTime() string {
+	return f.ModifiedTime
+}
+
+func (f File) GetOwnedByMe() bool {
+	return f.OwnedByMe
 }

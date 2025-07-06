@@ -15,6 +15,8 @@ tui for Google Drive in `Go`
 
 *installation instructions to be posted*
 
+for the best looks, you'll need to use [one of the nerdfonts](https://www.nerdfonts.com).
+
 ### To-Do
 
 - [ ] selective sync functionality

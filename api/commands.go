@@ -27,7 +27,7 @@ func RemoteLs(srv *drive.Service, dir string, debug_mode bool) error {
 		return err
 	} else {
 		itemlist, _ := content.([]utils.FileItem)
-		log.Print(strings.Join(utils.Stringize(itemlist, dir, ""), "\n"))
+		log.Print(strings.Join(utils.StringizeAll(itemlist, dir, []string{}), "\n"))
 		return nil
 	}
 }

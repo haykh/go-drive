@@ -40,7 +40,7 @@ type doneLoadingMsg struct {
 type browserModel struct {
 	// model configurations
 	debug_mode bool
-	format     string
+	format     []string
 
 	// model state
 	cwd         []string
