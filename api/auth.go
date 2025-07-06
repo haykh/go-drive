@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"go-drive/ui"
+	"go-drive/utils"
 	"net/http"
 	"os"
 
@@ -15,12 +16,12 @@ import (
 	"google.golang.org/api/option"
 )
 
-func GetGoogleDriveService(ctx context.Context, credentials_path, token_path, scope string, allow_web_auth bool) (*drive.Service, APIError) {
+func GetGoogleDriveService(ctx context.Context, credentials_path, token_path, scope string, allow_web_auth bool) (*drive.Service, utils.APIError) {
 	if client, err := getGoogleClient(ctx, credentials_path, token_path, scope, allow_web_auth); err != nil {
 		return nil, err
 	} else {
 		if srv, err := drive.NewService(ctx, option.WithHTTPClient(client)); err != nil {
-			return nil, &GoogleDriveError{err}
+			return nil, &utils.GoogleDriveError{DriveError: err}
 		} else {
 			log.Debug("Google Drive service initialized successfully")
 			return srv, nil
@@ -28,12 +29,12 @@ func GetGoogleDriveService(ctx context.Context, credentials_path, token_path, sc
 	}
 }
 
-func getGoogleClient(ctx context.Context, credentials_path, token_path, scope string, allow_web_auth bool) (*http.Client, APIError) {
+func getGoogleClient(ctx context.Context, credentials_path, token_path, scope string, allow_web_auth bool) (*http.Client, utils.APIError) {
 	if credentials, err := os.ReadFile(credentials_path); err != nil {
-		return nil, &ReadFileFailed{err, credentials_path}
+		return nil, &utils.ReadFileFailed{OSError: err, File: credentials_path}
 	} else {
 		if config, err := google.ConfigFromJSON(credentials, scope); err != nil {
-			return nil, &ParseCredentialsFailed{err}
+			return nil, &utils.ParseCredentialsFailed{DriveError: err}
 		} else {
 			if client, err := getClient(ctx, token_path, config, allow_web_auth); err != nil {
 				return nil, err
@@ -44,7 +45,7 @@ func getGoogleClient(ctx context.Context, credentials_path, token_path, scope st
 	}
 }
 
-func getClient(ctx context.Context, token_path string, config *oauth2.Config, allow_web_auth bool) (*http.Client, APIError) {
+func getClient(ctx context.Context, token_path string, config *oauth2.Config, allow_web_auth bool) (*http.Client, utils.APIError) {
 	tok, err := tokenFromFile(token_path)
 	if err != nil {
 		if allow_web_auth {
@@ -63,36 +64,36 @@ func getClient(ctx context.Context, token_path string, config *oauth2.Config, al
 	return config.Client(ctx, tok), nil
 }
 
-func tokenFromFile(file string) (*oauth2.Token, APIError) {
+func tokenFromFile(file string) (*oauth2.Token, utils.APIError) {
 	if f, err := os.Open(file); err != nil {
-		return nil, &OpenFileFailed{err, file}
+		return nil, &utils.OpenFileFailed{OSError: err, File: file}
 	} else {
 		defer f.Close()
 		tok := &oauth2.Token{}
 		if err := json.NewDecoder(f).Decode(tok); err != nil {
-			return nil, &TokenDecodeFailed{err}
+			return nil, &utils.TokenDecodeFailed{OSError: err}
 		} else {
 			return tok, nil
 		}
 	}
 }
 
-func getTokenFromWeb(ctx context.Context, config *oauth2.Config) (*oauth2.Token, APIError) {
+func getTokenFromWeb(ctx context.Context, config *oauth2.Config) (*oauth2.Token, utils.APIError) {
 	auth_url := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	log.Printf("go to the following link in your browser then type the authorization code: \n\n%v\n", auth_url)
 	if auth_code, err := ui.Prompt("auth code", ""); err != nil {
-		return nil, &ParseTokenFailed{err}
+		return nil, &utils.ParseTokenFailed{OSError: err}
 	} else if tok, err := config.Exchange(ctx, auth_code); err != nil {
-		return nil, &AuthTokenFailed{err, auth_code}
+		return nil, &utils.AuthTokenFailed{DriveError: err, AuthCode: auth_code}
 	} else {
 		return tok, nil
 	}
 }
 
-func saveToken(path string, token *oauth2.Token) APIError {
+func saveToken(path string, token *oauth2.Token) utils.APIError {
 	log.Printf("Saving credential file to: %s\n", path)
 	if f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600); err != nil {
-		return &WriteTokenFailed{err, path}
+		return &utils.WriteTokenFailed{OSError: err, File: path}
 	} else {
 		defer f.Close()
 		json.NewEncoder(f).Encode(token)

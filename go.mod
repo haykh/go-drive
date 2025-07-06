@@ -8,6 +8,7 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v0.4.2
 	github.com/dustin/go-humanize v1.0.1
+	github.com/gabriel-vasile/mimetype v1.4.9
 	github.com/urfave/cli/v3 v3.3.8
 	golang.org/x/oauth2 v0.30.0
 	google.golang.org/api v0.240.0

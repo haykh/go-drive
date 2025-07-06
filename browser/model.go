@@ -2,8 +2,7 @@ package browser
 
 import (
 	"fmt"
-	"go-drive/api"
-	"go-drive/ui"
+	"go-drive/utils"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -12,27 +11,41 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"google.golang.org/api/drive/v3"
 )
+
+type Mode int
+
+const (
+	Remote Mode = iota
+	Local
+)
+
+func FileListToItems(r []utils.FileItem) []list.Item {
+	items := []list.Item{}
+	for i := range r {
+		items = append(items, browserItem(fmt.Sprintf("%d", i)))
+	}
+	return items
+}
 
 type browserItem string
 
 func (i browserItem) FilterValue() string { return "" }
 
 type doneLoadingMsg struct {
-	filelist *drive.FileList
+	filelist []utils.FileItem
 	err      error
 }
 
 type browserModel struct {
 	// model configurations
-	srv        *drive.Service
 	debug_mode bool
 	format     string
 
 	// model state
-	cwd      []string
-	filelist *drive.FileList
+	cwd         []string
+	filemanager utils.FileManager
+	filelist    []utils.FileItem
 
 	// ui components
 	help    help.Model
@@ -54,34 +67,18 @@ func (m browserModel) CWD() string {
 	return strings.Join(m.cwd, "/")
 }
 
-func newFileList(srv *drive.Service, cwd string, debug_mode bool) (*drive.FileList, error) {
-	if filelist, err := api.GetFolderContent(srv, cwd); err != nil {
-		return nil, api.ToHumanReadableError(err, debug_mode)
-	} else {
-		return ui.SortFileList(filelist), nil
-	}
-}
-
-func (m browserModel) loadNewFileList() tea.Cmd {
+func (m browserModel) loadRemoteFileList() tea.Cmd {
 	return tea.Batch(
 		m.spinner.Tick,
 		func() tea.Msg {
-			filelist, err := newFileList(m.srv, m.CWD(), m.debug_mode)
+			filelist, err := m.filemanager.GetFileList(m.CWD(), m.debug_mode)
 			return doneLoadingMsg{filelist, err}
 		},
 	)
 }
 
-func fileListToItems(filelist *drive.FileList) []list.Item {
-	items := []list.Item{}
-	for i := range filelist.Files {
-		items = append(items, browserItem(fmt.Sprintf("%d", i)))
-	}
-	return items
-}
-
 func (m browserModel) Init() tea.Cmd {
-	return m.loadNewFileList()
+	return m.loadRemoteFileList()
 }
 
 func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -94,8 +91,8 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case doneLoadingMsg:
 		m.filelist = msg.filelist
-		m.list.SetDelegate(itemRenderer{m.filelist, m.format})
-		m.list.SetItems(fileListToItems(m.filelist))
+		m.list.SetDelegate(itemRenderer{m.filelist, m.cwd, m.format})
+		m.list.SetItems(FileListToItems(m.filelist))
 		m.list.Title = m.CWD()
 		if m.list.Title == "" {
 			m.list.Title = "/"
@@ -118,7 +115,7 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(m.cwd) > 0 {
 				m.cwd = []string{}
 				m.loading = true
-				return m, m.loadNewFileList()
+				return m, m.loadRemoteFileList()
 			}
 
 		case key.Matches(msg, m.keys.Help):
@@ -128,17 +125,17 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(m.cwd) > 0 {
 				m.cwd = m.cwd[:len(m.cwd)-1]
 				m.loading = true
-				return m, m.loadNewFileList()
+				return m, m.loadRemoteFileList()
 			}
 
 		case key.Matches(msg, m.keys.Select):
 			_, ok := m.list.SelectedItem().(browserItem)
 			if ok {
-				file := m.filelist.Files[m.list.Index()]
-				if file.MimeType == "application/vnd.google-apps.folder" {
-					m.cwd = append(m.cwd, file.Name)
+				file := m.filelist[m.list.Index()]
+				if file.IsDirectory() {
+					m.cwd = append(m.cwd, file.GetName())
 					m.loading = true
-					return m, m.loadNewFileList()
+					return m, m.loadRemoteFileList()
 				}
 			}
 			return m, nil

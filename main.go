@@ -3,8 +3,7 @@ package main
 import (
 	"context"
 	"go-drive/api"
-	"go-drive/browser"
-	"go-drive/ui"
+	"go-drive/utils"
 	"os"
 	"path/filepath"
 
@@ -48,6 +47,18 @@ func main() {
 			Value:   filepath.Join(home, ".config", "godrive", "token.json"),
 			Usage:   "path to the Google Drive token file",
 		},
+		&cli.StringFlag{
+			Name:    "syncmap",
+			Aliases: []string{"s"},
+			Value:   filepath.Join(home, ".config", "godrive", "syncmap.json"),
+			Usage:   "sync map between local and remote filesystems",
+		},
+		&cli.StringFlag{
+			Name:    "local",
+			Aliases: []string{"l"},
+			Value:   filepath.Join(home, ".config", "godrive", "storage"),
+			Usage:   "path to the local mirror storage",
+		},
 		&cli.BoolFlag{
 			Name:    "debug",
 			Aliases: []string{"d"},
@@ -69,12 +80,12 @@ func main() {
 					debug_mode := c.Bool("debug")
 					initLogger(debug_mode)
 					_, err := api.GetGoogleDriveService(ctx, c.String("credentials"), c.String("token"), drive.DriveScope, true)
-					return api.ToHumanReadableError(err, debug_mode)
+					return utils.ToHumanReadableError(err, debug_mode)
 				},
 			},
 			{
 				Name:  "ls",
-				Usage: "list content of a Google Drive folder",
+				Usage: "list content of the remote directory",
 				Flags: common_flags,
 				Action: func(ctx context.Context, c *cli.Command) error {
 					debug_mode := c.Bool("debug")
@@ -84,34 +95,15 @@ func main() {
 						dir = c.Args().Get(0)
 					}
 					if srv, err := api.GetGoogleDriveService(ctx, c.String("credentials"), c.String("token"), drive.DriveScope, false); err != nil {
-						return api.ToHumanReadableError(err, debug_mode)
+						return utils.ToHumanReadableError(err, debug_mode)
 					} else {
-						if content, err := ui.RunWithSpinner(
-							func() (any, error) {
-								if ret, err := api.GetFolderContent(srv, dir); err != nil {
-									return nil, api.ToHumanReadableError(err, debug_mode)
-								} else {
-									return ret, nil
-								}
-							},
-							"loading",
-							"unable to get directory content",
-							"",
-							debug_mode,
-						); err != nil {
-							return err
-						} else {
-							for _, str_item := range ui.StringizeItemList(content.(*drive.FileList), "%icon% %shared% %name% %size%") {
-								log.Print(str_item)
-							}
-							return nil
-						}
+						return api.RemoteLs(srv, dir, debug_mode)
 					}
 				},
 			},
 			{
-				Name:  "fs",
-				Usage: "open file picker in the Google Drive folder",
+				Name:  "remote",
+				Usage: "open file picker in the remote directory",
 				Flags: common_flags,
 				Action: func(ctx context.Context, c *cli.Command) error {
 					debug_mode := c.Bool("debug")
@@ -121,13 +113,24 @@ func main() {
 						dir = c.Args().Get(0)
 					}
 					if srv, err := api.GetGoogleDriveService(ctx, c.String("credentials"), c.String("token"), drive.DriveScope, false); err != nil {
-						return api.ToHumanReadableError(err, debug_mode)
+						return utils.ToHumanReadableError(err, debug_mode)
 					} else {
-						// @TODO
-						// fmt.Printf("%v %s", srv, dir)
-						// return nil
-						return browser.FileBrowser(srv, dir, debug_mode)
+						return api.RemoteFileBrowser(srv, c.String("syncmap"), dir, debug_mode)
 					}
+				},
+			},
+			{
+				Name:  "local",
+				Usage: "open file picker in the local mirror directory",
+				Flags: common_flags,
+				Action: func(ctx context.Context, c *cli.Command) error {
+					debug_mode := c.Bool("debug")
+					initLogger(debug_mode)
+					dir := ""
+					if c.NArg() > 0 {
+						dir = c.Args().Get(0)
+					}
+					return api.LocalFileBrowser(c.String("syncmap"), c.String("local"), dir, debug_mode)
 				},
 			},
 		},
@@ -137,51 +140,3 @@ func main() {
 		log.Fatal(err)
 	}
 }
-
-// func main() {
-// 	ctx := context.Background()
-//
-// 	scope := drive.DriveScope
-// 	if client, err := api.GetGoogleClient(ctx, "./credentials/credentials.json", scope); err != nil {
-// 		panic(err)
-// 	} else {
-// 		if srv, err := drive.NewService(ctx, option.WithHTTPClient(client)); err != nil {
-// 			log.Fatalf("Unable to retrieve Drive client: %+v", err)
-// 		} else {
-// 			if newfile, err := api.UploadFile(srv, "./hello.txt", "Test", api.Overwrite); err != nil {
-// 				panic(err)
-// 			} else {
-// 				fmt.Printf("%v\n", newfile)
-// 			}
-// 			// if folder_id, err := api.GetFolderId(srv, "Literature"); err != nil {
-// 			// 	panic(err)
-// 			// } else {
-// 			// 	fmt.Printf("Folder id: %s\n", folder_id)
-// 			// }
-// 			// if content, err := api.GetFolderContent(srv, "Literature"); err != nil {
-// 			// 	panic(err)
-// 			// } else {
-// 			// 	for _, c := range content {
-// 			// 		fmt.Printf("%v\n", c)
-// 			// 	}
-// 			// }
-// 		}
-// 	}
-//
-// 	// r, err := srv.Files.List().
-// 	// 	PageSize(10).
-// 	// 	Fields("nextPageToken, files(id, name)").
-// 	// 	Do()
-// 	//
-// 	// if err != nil {
-// 	// 	log.Fatalf("Unable to retrieve files: %+v", err)
-// 	// }
-// 	// fmt.Println("Files:")
-// 	// if len(r.Files) == 0 {
-// 	// 	fmt.Println("No files found.")
-// 	// } else {
-// 	// 	for _, i := range r.Files {
-// 	// 		fmt.Printf("%s (%s)\n", i.Name, i.Id)
-// 	// 	}
-// 	// }
-// }
