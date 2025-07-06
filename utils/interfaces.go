@@ -51,14 +51,12 @@ func appendColumn(current, column string, width int, pos lipgloss.Position, styl
 	)
 }
 
-func Stringize(f FileItem, path string, cols []string) string {
+func Stringize(f FileItem, path string) string {
 	icon, ok := ui.MimeIcons[f.GetMimeType()]
 	if !ok {
 		icon = ui.MimeIcons["other"]
 	}
-	if len(cols) == 0 {
-		cols = []string{"icon", "sync", "name", "size", "shared"}
-	}
+	cols := []string{"icon", "sync", "name", "size", "shared"}
 
 	style := lipgloss.NewStyle()
 	item_str := ""
@@ -93,10 +91,10 @@ func Stringize(f FileItem, path string, cols []string) string {
 	return item_str
 }
 
-func StringizeAll(f []FileItem, path string, format []string) []string {
+func StringizeAll(f []FileItem, path string) []string {
 	items := make([]string, len(f))
 	for i, item := range f {
-		items[i] = Stringize(item, path, format)
+		items[i] = Stringize(item, path)
 	}
 	return items
 }

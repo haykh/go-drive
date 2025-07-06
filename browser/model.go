@@ -91,7 +91,7 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case doneLoadingMsg:
 		m.filelist = msg.filelist
-		m.list.SetDelegate(itemRenderer{m.filelist, m.cwd, m.format})
+		m.list.SetDelegate(itemRenderer{m.filelist, m.cwd})
 		m.list.SetItems(FileListToItems(m.filelist))
 		m.list.Title = m.CWD()
 		if m.list.Title == "" {

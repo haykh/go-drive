@@ -11,7 +11,7 @@ import (
 )
 
 func FileBrowser(mgr utils.FileManager, path string, debug_mode bool) error {
-	l := list.New([]list.Item{}, itemRenderer{nil, []string{}, []string{}}, 20, 30)
+	l := list.New([]list.Item{}, itemRenderer{nil, []string{}}, 20, 30)
 	l.SetShowHelp(false)
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
