@@ -31,3 +31,10 @@ var MimeIcons = map[string]string{
 	"application/vnd.openxmlformats-officedocument.presentationml.presentation": "",
 	"application/vnd.openxmlformats-officedocument.wordprocessingml.document":   "",
 }
+
+var StatusIcons = map[string]string{
+	"synced": "󰅟",
+	"remote": "",
+	"local":  "",
+	"shared": "",
+}

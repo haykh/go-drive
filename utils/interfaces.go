@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/dustin/go-humanize"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
 type FileManager interface {
@@ -51,58 +52,69 @@ func appendColumn(current, column string, width int, pos lipgloss.Position, styl
 	)
 }
 
+type column struct {
+	width int
+	pos   lipgloss.Position
+}
+
 func Stringize(f FileItem, path string) string {
 	icon, ok := ui.MimeIcons[f.GetMimeType()]
 	if !ok {
 		icon = ui.MimeIcons["other"]
 	}
-	cols := []string{"icon", "sync", "name", "size", "shared"}
 
-	style := lipgloss.NewStyle()
+	om := orderedmap.New[string, column]()
+	om.Set("icon", column{2, lipgloss.Left})
+	om.Set("sync", column{2, lipgloss.Left})
+	om.Set("name", column{60, lipgloss.Left})
+	om.Set("size", column{10, lipgloss.Right})
+	om.Set("shared", column{3, lipgloss.Left})
+
 	item_str := ""
-	for _, field := range cols {
+	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
+		field := pair.Key
+		col := pair.Value
+		symbol := ""
+
 		switch field {
+
 		case "icon":
-			item_str = appendColumn(item_str, icon, 2, lipgloss.Left, style)
+			symbol = icon
+
 		case "sync":
-			if f.IsDirectory() {
-				if f.IsRemote() && f.IsLocal() {
-					item_str = appendColumn(item_str, " ", 2, lipgloss.Left, style)
-				} else if f.IsRemote() {
-					item_str = appendColumn(item_str, "", 2, lipgloss.Left, style)
-				} else if f.IsLocal() {
-					item_str = appendColumn(item_str, "", 2, lipgloss.Left, style)
+			if f.IsRemote() && f.IsLocal() {
+				if f.IsDirectory() {
+					symbol = " "
 				} else {
-					panic("file is neither remote nor local")
+					symbol = ui.StatusIcons["synced"]
 				}
+			} else if f.IsRemote() {
+				symbol = ui.StatusIcons["remote"]
+			} else if f.IsLocal() {
+				symbol = ui.StatusIcons["local"]
 			} else {
-				if f.IsRemote() && f.IsLocal() {
-					item_str = appendColumn(item_str, "󰅟", 2, lipgloss.Left, style)
-				} else if f.IsRemote() {
-					item_str = appendColumn(item_str, "", 2, lipgloss.Left, style)
-				} else if f.IsLocal() {
-					item_str = appendColumn(item_str, "", 2, lipgloss.Left, style)
-				} else {
-					panic("file is neither remote nor local")
-				}
+				panic("file is neither remote nor local")
 			}
+
 		case "name":
 			name := f.GetName()
-			if len(name) > 60 {
-				name = name[:57] + "..."
+			if len(name) > col.width {
+				name = name[:col.width-3] + "..."
 			}
-			item_str = appendColumn(item_str, name, 60, lipgloss.Left, style)
+			symbol = name
+
 		case "shared":
 			if !f.GetOwnedByMe() {
-				item_str = appendColumn(item_str, " ", 2, lipgloss.Left, style)
-			} else {
-				item_str = appendColumn(item_str, "", 2, lipgloss.Left, style)
+				symbol = ui.StatusIcons["shared"]
 			}
+
 		case "size":
 			if !f.IsDirectory() {
-				item_str = appendColumn(item_str, humanize.Bytes(f.GetSize()), 10, lipgloss.Right, style)
+				symbol = humanize.Bytes(f.GetSize())
 			}
 		}
+
+		item_str = appendColumn(item_str, symbol, col.width, col.pos, lipgloss.NewStyle())
 	}
 	return item_str
 }

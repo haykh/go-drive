@@ -91,7 +91,7 @@ func main() {
 					if srv, err := api.GetGoogleDriveService(ctx, c.String("credentials"), c.String("token"), drive.DriveScope, false); err != nil {
 						return utils.ToHumanReadableError(err, debug_mode)
 					} else {
-						return api.RemoteLs(srv, dir, debug_mode)
+						return api.DualLs(srv, c.String("local"), dir, debug_mode)
 					}
 				},
 			},

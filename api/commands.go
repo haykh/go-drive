@@ -13,14 +13,17 @@ import (
 	"google.golang.org/api/drive/v3"
 )
 
-func RemoteLs(srv *drive.Service, dir string, debug_mode bool) error {
-	mgr := remote.Manager{Srv: srv}
+func DualLs(srv *drive.Service, local_root, dir string, debug_mode bool) error {
+	mgr := filesystem.DualManager{
+		LocalManager:  &local.Manager{Root: local_root},
+		RemoteManager: &remote.Manager{Srv: srv},
+	}
 	if content, err := ui.RunWithSpinner(
 		func() (any, error) {
 			return mgr.GetFileList(dir, debug_mode)
 		},
 		"loading",
-		"unable to get directory content",
+		"unable to get local or remote content",
 		"",
 		debug_mode,
 	); err != nil {
