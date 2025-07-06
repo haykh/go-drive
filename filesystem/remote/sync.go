@@ -1,9 +1,7 @@
 package remote
 
-import (
-	"go-drive/utils"
-)
+import "go-drive/filesystem"
 
-func (m Manager) Synchronize(utils.FileItem, bool) error {
+func (m Manager) Synchronize(filesystem.FileItem, bool) error {
 	return nil
 }

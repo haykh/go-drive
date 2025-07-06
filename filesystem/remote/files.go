@@ -1,14 +1,15 @@
 package remote
 
 import (
+	"go-drive/filesystem"
 	"go-drive/ui"
 	"go-drive/utils"
 
 	"google.golang.org/api/drive/v3"
 )
 
-var _ utils.FileItem = &File{}
-var _ utils.FileManager = &Manager{}
+var _ filesystem.FileItem = &File{}
+var _ filesystem.FileManager = &Manager{}
 
 /* - - - - - - - - - -
  * Manager
@@ -17,15 +18,15 @@ type Manager struct {
 	Srv *drive.Service
 }
 
-func (m Manager) GetFileList(path string, debug_mode bool) ([]utils.FileItem, error) {
+func (m Manager) GetFileList(path string, debug_mode bool) ([]filesystem.FileItem, error) {
 	if remote_filelist, err := getFolderContent(m.Srv, path); err != nil {
 		return nil, utils.ToHumanReadableError(err, debug_mode)
 	} else {
-		wrappedFiles := make([]utils.FileItem, len(remote_filelist))
+		wrappedFiles := make([]filesystem.FileItem, len(remote_filelist))
 		for i, f := range remote_filelist {
 			wrappedFiles[i] = f
 		}
-		return utils.Sorted(wrappedFiles), nil
+		return filesystem.Sorted(wrappedFiles), nil
 	}
 }
 

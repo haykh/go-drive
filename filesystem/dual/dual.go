@@ -1,13 +1,16 @@
-package filesystem
+package dual
 
 import (
+	"fmt"
+	"go-drive/filesystem"
 	"go-drive/filesystem/local"
 	"go-drive/filesystem/remote"
-	"go-drive/utils"
+
+	"github.com/charmbracelet/log"
 )
 
-var _ utils.FileItem = &DualFile{}
-var _ utils.FileManager = &DualManager{}
+var _ filesystem.FileItem = &DualFile{}
+var _ filesystem.FileManager = &DualManager{}
 
 /* - - - - - - - - - -
  * Manager
@@ -17,16 +20,19 @@ type DualManager struct {
 	LocalManager  *local.Manager
 }
 
-func (m DualManager) GetFileList(path string, debug_mode bool) ([]utils.FileItem, error) {
-	remote_filelist, err := m.RemoteManager.GetFileList(path, debug_mode)
-	if err != nil {
-		return nil, err
+func (m DualManager) GetFileList(path string, debug_mode bool) ([]filesystem.FileItem, error) {
+	remote_filelist, err_remote := m.RemoteManager.GetFileList(path, debug_mode)
+	if err_remote != nil {
+		log.Warnf("Failed to get remote file list for %s", path)
 	}
-	local_filelist, err := m.LocalManager.GetFileList(path, debug_mode)
-	if err != nil {
-		return nil, err
+	local_filelist, err_local := m.LocalManager.GetFileList(path, debug_mode)
+	if err_local != nil {
+		log.Warnf("Failed to get local file list for %s", path)
 	}
-	dual_filelist := []utils.FileItem{}
+	if err_remote != nil && err_local != nil {
+		return nil, fmt.Errorf("failed to get file list for remote & local %s: %v, %v", path, err_remote, err_local)
+	}
+	dual_filelist := []filesystem.FileItem{}
 	for _, remote_file := range remote_filelist {
 		dual_file := DualFile{
 			RemoteFile: remote_file.(*remote.File),
@@ -48,7 +54,7 @@ func (m DualManager) GetFileList(path string, debug_mode bool) ([]utils.FileItem
 		}
 		dual_filelist = append(dual_filelist, dual_file)
 	}
-	return utils.Sorted(dual_filelist), nil
+	return filesystem.Sorted(dual_filelist), nil
 }
 
 /* - - - - - - - - - -

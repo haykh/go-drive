@@ -1,11 +1,12 @@
 package local
 
 import (
+	"go-drive/filesystem"
 	"go-drive/utils"
 )
 
-var _ utils.FileItem = &File{}
-var _ utils.FileManager = &Manager{}
+var _ filesystem.FileItem = &File{}
+var _ filesystem.FileManager = &Manager{}
 
 /* - - - - - - - - - -
  * Manager
@@ -14,15 +15,15 @@ type Manager struct {
 	Root string
 }
 
-func (m Manager) GetFileList(path string, debug_mode bool) ([]utils.FileItem, error) {
+func (m Manager) GetFileList(path string, debug_mode bool) ([]filesystem.FileItem, error) {
 	if local_filelist, err := getFolderContent(m.Root, path); err != nil {
 		return nil, utils.ToHumanReadableError(err, debug_mode)
 	} else {
-		wrappedFiles := make([]utils.FileItem, len(local_filelist))
+		wrappedFiles := make([]filesystem.FileItem, len(local_filelist))
 		for i, f := range local_filelist {
 			wrappedFiles[i] = f
 		}
-		return utils.Sorted(wrappedFiles), nil
+		return filesystem.Sorted(wrappedFiles), nil
 	}
 }
 

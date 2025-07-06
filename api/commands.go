@@ -2,12 +2,12 @@ package api
 
 import (
 	"bytes"
-	"go-drive/browser"
+	"go-drive/components/browser"
+	"go-drive/components/spinner"
 	"go-drive/filesystem"
+	"go-drive/filesystem/dual"
 	"go-drive/filesystem/local"
 	"go-drive/filesystem/remote"
-	"go-drive/ui"
-	"go-drive/utils"
 	"strings"
 
 	"github.com/charmbracelet/log"
@@ -15,11 +15,11 @@ import (
 )
 
 func DualLs(srv *drive.Service, local_root, dir string, debug_mode bool) error {
-	mgr := filesystem.DualManager{
+	mgr := dual.DualManager{
 		LocalManager:  &local.Manager{Root: local_root},
 		RemoteManager: &remote.Manager{Srv: srv},
 	}
-	if content, err := ui.RunWithSpinner(
+	if content, err := spinner.RunWithSpinner(
 		func() (any, error) {
 			return mgr.GetFileList(dir, debug_mode)
 		},
@@ -30,8 +30,8 @@ func DualLs(srv *drive.Service, local_root, dir string, debug_mode bool) error {
 	); err != nil {
 		return err
 	} else {
-		itemlist, _ := content.([]utils.FileItem)
-		log.Print(strings.Join(utils.StringizeAll(itemlist, dir), "\n"))
+		itemlist, _ := content.([]filesystem.FileItem)
+		log.Print(strings.Join(filesystem.StringizeAll(itemlist, dir), "\n"))
 		return nil
 	}
 }
@@ -46,7 +46,7 @@ func DualLs(srv *drive.Service, local_root, dir string, debug_mode bool) error {
 
 func DualFileBrowser(srv *drive.Service, local_root, dir string, debug_mode bool, debugBuffer *bytes.Buffer) error {
 	return browser.FileBrowser(
-		&filesystem.DualManager{
+		&dual.DualManager{
 			LocalManager:  &local.Manager{Root: local_root},
 			RemoteManager: &remote.Manager{Srv: srv},
 		},

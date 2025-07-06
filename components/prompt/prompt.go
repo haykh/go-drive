@@ -1,7 +1,8 @@
-package ui
+package prompt
 
 import (
 	"fmt"
+	"go-drive/ui"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -61,8 +62,8 @@ func (m promptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m promptModel) View() string {
 	return fmt.Sprintf(
 		"%s%s\n%s\n",
-		WithColor("2").Render(m.prompt+": "),
+		ui.WithForeground("2").Render(m.prompt+": "),
 		m.textInput.View()[2:],
-		WithColor("8").Render("(esc to quit)"),
+		ui.WithForeground("8").Render("(esc to quit)"),
 	)
 }

@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"go-drive/ui"
+	"go-drive/components/prompt"
 	"go-drive/utils"
 	"net/http"
 	"os"
@@ -81,7 +81,7 @@ func tokenFromFile(file string) (*oauth2.Token, utils.APIError) {
 func getTokenFromWeb(ctx context.Context, config *oauth2.Config) (*oauth2.Token, utils.APIError) {
 	auth_url := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	log.Printf("go to the following link in your browser then type the authorization code: \n\n%v\n", auth_url)
-	if auth_code, err := ui.Prompt("auth code", ""); err != nil {
+	if auth_code, err := prompt.Prompt("auth code", ""); err != nil {
 		return nil, &utils.ParseTokenFailed{OSError: err}
 	} else if tok, err := config.Exchange(ctx, auth_code); err != nil {
 		return nil, &utils.AuthTokenFailed{DriveError: err, AuthCode: auth_code}

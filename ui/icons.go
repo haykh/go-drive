@@ -1,5 +1,7 @@
 package ui
 
+import "github.com/charmbracelet/lipgloss"
+
 var MimeIcons = map[string]string{
 	"directory":                                "",
 	"application/vnd.google-apps.folder":       "",
@@ -33,8 +35,24 @@ var MimeIcons = map[string]string{
 }
 
 var StatusIcons = map[string]string{
-	"synced": "󰅟",
-	"remote": "",
-	"local":  "",
-	"shared": "",
+	"synced":  "󰅟",
+	"remote":  "",
+	"local":   "",
+	"syncing": "󰘿",
+	"shared":  "",
 }
+
+var (
+	SyncedStyle  = WithForeground("2")
+	RemoteStyle  = WithForeground("3")
+	LocalStyle   = WithForeground("4")
+	SyncingStyle = WithForeground("1")
+
+	MimeIconStyle         = WithForeground("8")
+	MimeIconSelectedStyle = WithForeground("170")
+
+	FileNameStyle         = lipgloss.NewStyle()
+	FileNameSelectedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("170")).Underline(true)
+
+	FileSizeStyle = WithForeground("8")
+)

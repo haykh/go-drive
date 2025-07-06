@@ -1,16 +1,19 @@
-package filesystem
+package dual
 
 import (
 	"fmt"
+	"go-drive/filesystem"
 	"go-drive/filesystem/remote"
 	"go-drive/utils"
 	"path/filepath"
+	"time"
 
 	"github.com/charmbracelet/log"
 )
 
-func (m DualManager) Synchronize(file utils.FileItem, debug_mode bool) error {
+func (m DualManager) Synchronize(file filesystem.FileItem, debug_mode bool) error {
 	log.Debugf("Synchronizing file: %s", file.GetName())
+	time.Sleep(2 * time.Second)
 	if file.IsLocal() && file.IsRemote() {
 		return nil
 	} else if file.IsLocal() {

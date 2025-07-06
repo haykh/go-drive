@@ -2,7 +2,8 @@ package browser
 
 import (
 	"bytes"
-	"go-drive/utils"
+	"go-drive/filesystem"
+	"go-drive/ui"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -12,22 +13,24 @@ import (
 )
 
 func FileBrowser(
-	mgr utils.FileManager,
+	mgr filesystem.FileManager,
 	path string,
 	debug_mode bool,
 	debugBuffer *bytes.Buffer,
 ) error {
-	l := list.New([]list.Item{}, itemRenderer{nil, []string{}}, 20, 30)
+	l := list.New([]list.Item{}, itemRenderer{nil, []int{}, []string{}}, 20, 30)
 	l.SetShowHelp(false)
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
-	l.Styles.PaginationStyle = paginationStyle
+	l.Styles.PaginationStyle = ui.BrowserPagination
 	model := browserModel{
 		debug_mode: debug_mode,
 		format:     []string{},
 
 		cwd:         strings.Split(path, "/"),
 		filemanager: mgr,
+		filelist:    []filesystem.FileItem{},
+		filesinsync: []int{},
 
 		help:    help.New(),
 		list:    l,
