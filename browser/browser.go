@@ -1,6 +1,7 @@
 package browser
 
 import (
+	"bytes"
 	"go-drive/utils"
 	"strings"
 
@@ -10,7 +11,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func FileBrowser(mgr utils.FileManager, path string, debug_mode bool) error {
+func FileBrowser(
+	mgr utils.FileManager,
+	path string,
+	debug_mode bool,
+	debugBuffer *bytes.Buffer,
+) error {
 	l := list.New([]list.Item{}, itemRenderer{nil, []string{}}, 20, 30)
 	l.SetShowHelp(false)
 	l.SetShowStatusBar(false)
@@ -27,8 +33,11 @@ func FileBrowser(mgr utils.FileManager, path string, debug_mode bool) error {
 		list:    l,
 		spinner: spinner.New(spinner.WithSpinner(spinner.Dot)),
 
-		loading:  true,
-		quitting: false,
+		loading:     true,
+		status:      "",
+		quitting:    false,
+		debugLines:  []string{},
+		debugBuffer: debugBuffer,
 
 		keys: keys,
 	}

@@ -1,8 +1,8 @@
 package ui
 
 var MimeIcons = map[string]string{
-	"directory":                                "󰉋",
-	"application/vnd.google-apps.folder":       "󰉋",
+	"directory":                                "",
+	"application/vnd.google-apps.folder":       "",
 	"application/vnd.google.colaboratory":      "",
 	"application/vnd.google-apps.document":     "󰈙",
 	"application/vnd.google-apps.spreadsheet":  "󰧷",

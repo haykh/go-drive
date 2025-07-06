@@ -1,7 +1,9 @@
 package browser
 
 import (
+	"bytes"
 	"fmt"
+	"go-drive/filesystem"
 	"go-drive/utils"
 	"strings"
 
@@ -53,8 +55,11 @@ type browserModel struct {
 	spinner spinner.Model
 
 	// ui state
-	loading  bool
-	quitting bool
+	loading     bool
+	status      string
+	quitting    bool
+	debugLines  []string
+	debugBuffer *bytes.Buffer
 
 	// ui configurations
 	keys keyMap
@@ -70,6 +75,25 @@ func (m browserModel) loadRemoteFileList() tea.Cmd {
 		func() tea.Msg {
 			filelist, err := m.filemanager.GetFileList(m.CWD(), m.debug_mode)
 			return doneLoadingMsg{filelist, err}
+		},
+	)
+}
+
+func (m browserModel) syncFile(file utils.FileItem) tea.Cmd {
+	return tea.Batch(
+		m.spinner.Tick,
+		func() tea.Msg {
+			mgr := m.filemanager
+			if dv, ok := mgr.(filesystem.DualManager); ok {
+				if df, ok := file.(filesystem.DualFile); ok {
+					if err := dv.Synchronize(df, m.debug_mode); err != nil {
+						return err
+					}
+					filelist, err := mgr.GetFileList(m.CWD(), m.debug_mode)
+					return doneLoadingMsg{filelist, err}
+				}
+			}
+			return nil
 		},
 	)
 }
@@ -101,6 +125,18 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.spinner, cmd = m.spinner.Update(msg)
 			return m, cmd
 		}
+		if m.debug_mode {
+			data := m.debugBuffer.String()
+			m.debugBuffer.Reset()
+			debug_lines := []string{}
+			if data != "" {
+				debug_lines = strings.Split(strings.TrimSuffix(data, "\n"), "\n")
+			}
+			m.debugLines = append(m.debugLines, debug_lines...)
+			if len(m.debugLines) > 40 {
+				m.debugLines = m.debugLines[len(m.debugLines)-40:]
+			}
+		}
 
 	case tea.KeyMsg:
 		switch {
@@ -112,6 +148,7 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(m.cwd) > 0 {
 				m.cwd = []string{}
 				m.loading = true
+				m.status = "loading /..."
 				return m, m.loadRemoteFileList()
 			}
 
@@ -122,17 +159,29 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(m.cwd) > 0 {
 				m.cwd = m.cwd[:len(m.cwd)-1]
 				m.loading = true
+				m.status = fmt.Sprintf("loading %s...", m.CWD())
 				return m, m.loadRemoteFileList()
 			}
 
 		case key.Matches(msg, m.keys.Select):
-			_, ok := m.list.SelectedItem().(browserItem)
-			if ok {
+			if _, ok := m.list.SelectedItem().(browserItem); ok {
 				file := m.filelist[m.list.Index()]
 				if file.IsDirectory() {
 					m.cwd = append(m.cwd, file.GetName())
 					m.loading = true
+					m.status = fmt.Sprintf("loading %s...", m.CWD())
 					return m, m.loadRemoteFileList()
+				}
+			}
+			return m, nil
+
+		case key.Matches(msg, m.keys.Sync):
+			if _, ok := m.list.SelectedItem().(browserItem); ok {
+				file := m.filelist[m.list.Index()]
+				if !file.IsDirectory() {
+					m.loading = true
+					m.status = fmt.Sprintf("syncing %s...", file.GetName())
+					return m, m.syncFile(file)
 				}
 			}
 			return m, nil
@@ -148,8 +197,13 @@ func (m browserModel) View() string {
 		return ""
 	}
 	if m.loading {
-		m.list.Title = fmt.Sprintf("%s loading %s...", m.spinner.View(), m.CWD())
+		m.list.Title = fmt.Sprintf("%s %s", m.spinner.View(), m.status)
 		m.list.Styles.Title = lipgloss.NewStyle().MarginLeft(2)
 	}
-	return "\n" + m.list.View() + "\n" + helpStyle.Render(m.help.View(m.keys))
+	debug_log := ""
+	if m.debug_mode {
+		debug_log = fmt.Sprintf("%s\n%s", debugTitle.Render("debug log"), strings.Join(m.debugLines, "\n"))
+	}
+	normal_view := fmt.Sprintf("\n%s\n%s\n", m.list.View(), helpStyle.Render(m.help.View(m.keys)))
+	return lipgloss.JoinHorizontal(lipgloss.Top, mainField.Render(normal_view), debug_log)
 }

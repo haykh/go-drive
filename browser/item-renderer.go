@@ -24,7 +24,7 @@ func (d itemRenderer) Height() int                             { return 1 }
 func (d itemRenderer) Spacing() int                            { return 0 }
 func (d itemRenderer) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 func (d itemRenderer) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	str := utils.Stringize(d.filelist[index], d.CWD())
+	str := utils.Stringize(d.filelist[index], d.CWD(), index == m.Index())
 
 	fn := itemStyle.Render
 	if index == m.Index() {

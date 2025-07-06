@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"go-drive/api"
 	"go-drive/utils"
@@ -13,7 +14,8 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-func initLogger(debug bool) {
+func initLogger(debug bool, bufferize bool) *bytes.Buffer {
+	var logBuffer bytes.Buffer
 	var logger *log.Logger
 	if debug {
 		logger = log.NewWithOptions(os.Stderr, log.Options{
@@ -26,6 +28,11 @@ func initLogger(debug bool) {
 		})
 	}
 	log.SetDefault(logger)
+	if bufferize {
+		log.SetOutput(&logBuffer)
+		return &logBuffer
+	}
+	return nil
 }
 
 func main() {
@@ -72,7 +79,7 @@ func main() {
 				Flags:   common_flags,
 				Action: func(ctx context.Context, c *cli.Command) error {
 					debug_mode := c.Bool("debug")
-					initLogger(debug_mode)
+					initLogger(debug_mode, false)
 					_, err := api.GetGoogleDriveService(ctx, c.String("credentials"), c.String("token"), drive.DriveScope, true)
 					return utils.ToHumanReadableError(err, debug_mode)
 				},
@@ -83,7 +90,7 @@ func main() {
 				Flags: common_flags,
 				Action: func(ctx context.Context, c *cli.Command) error {
 					debug_mode := c.Bool("debug")
-					initLogger(debug_mode)
+					initLogger(debug_mode, false)
 					dir := ""
 					if c.NArg() > 0 {
 						dir = c.Args().Get(0)
@@ -101,7 +108,7 @@ func main() {
 				Flags: common_flags,
 				Action: func(ctx context.Context, c *cli.Command) error {
 					debug_mode := c.Bool("debug")
-					initLogger(debug_mode)
+					debugBuffer := initLogger(debug_mode, true)
 					dir := ""
 					if c.NArg() > 0 {
 						dir = c.Args().Get(0)
@@ -109,7 +116,7 @@ func main() {
 					if srv, err := api.GetGoogleDriveService(ctx, c.String("credentials"), c.String("token"), drive.DriveScope, false); err != nil {
 						return utils.ToHumanReadableError(err, debug_mode)
 					} else {
-						return api.DualFileBrowser(srv, c.String("local"), dir, debug_mode)
+						return api.DualFileBrowser(srv, c.String("local"), dir, debug_mode, debugBuffer)
 					}
 				},
 			},

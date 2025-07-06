@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"go-drive/browser"
 	"go-drive/filesystem"
 	"go-drive/filesystem/local"
@@ -43,7 +44,7 @@ func DualLs(srv *drive.Service, local_root, dir string, debug_mode bool) error {
 // 	return browser.FileBrowser(&local.Manager{Root: local_root}, dir, debug_mode)
 // }
 
-func DualFileBrowser(srv *drive.Service, local_root, dir string, debug_mode bool) error {
+func DualFileBrowser(srv *drive.Service, local_root, dir string, debug_mode bool, debugBuffer *bytes.Buffer) error {
 	return browser.FileBrowser(
 		&filesystem.DualManager{
 			LocalManager:  &local.Manager{Root: local_root},
@@ -51,6 +52,7 @@ func DualFileBrowser(srv *drive.Service, local_root, dir string, debug_mode bool
 		},
 		dir,
 		debug_mode,
+		debugBuffer,
 	)
 }
 

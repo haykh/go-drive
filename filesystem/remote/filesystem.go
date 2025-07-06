@@ -3,6 +3,7 @@ package remote
 import (
 	"fmt"
 	"go-drive/utils"
+	"os"
 	"strings"
 
 	"github.com/charmbracelet/log"
@@ -67,86 +68,87 @@ func queryFiles(srv *drive.Service, query string) ([]*File, utils.APIError) {
 // 	}
 // }
 
-// func UploadFile(srv *drive.Service, file_path, remote_path string, mode utils.UploadMode) (*File, utils.APIError) {
-// 	if file, err := os.Open(file_path); err != nil {
-// 		return nil, &utils.OpenFileFailed{OSError: err, File: file_path}
-// 	} else {
-// 		defer file.Close()
-// 		parts := strings.Split(strings.Trim(file_path, "/"), "/")
-// 		file_name := parts[len(parts)-1]
-// 		if remote_folder, err := getFolder(srv, remote_path); err != nil {
-// 			return nil, err
-// 		} else {
-// 			if remote_file, err := getFileInFolderId(srv, file_name, remote_folder.Id, remote_path); err != nil {
-// 				switch err.(type) {
-// 				case *utils.FileNotFound:
-// 					return createNewRemoteFile(srv,
-// 						file_name,
-// 						remote_path,
-// 						&drive.File{
-// 							Name:    file_name,
-// 							Parents: []string{remote_folder.Id},
-// 						},
-// 						file,
-// 					)
-// 				default:
-// 					return nil, err
-// 				}
-// 			} else {
-// 				switch mode {
-// 				case utils.RaiseIfDuplicate:
-// 					return nil, &utils.DuplicateFile{File: file_name, Path: remote_path}
-// 				case utils.SkipDuplicates:
-// 					log.Warnf("File %s already exists in %s : skipping", file_name, remote_path)
-// 					return remote_file, nil
-// 				case utils.Overwrite:
-// 					log.Warnf("File %s already exists in %s : overwriting", file_name, remote_path)
-// 					return overwriteRemoteFile(
-// 						srv,
-// 						file_name,
-// 						remote_file.Id,
-// 						remote_path,
-// 						&drive.File{},
-// 						file,
-// 					)
-// 				default:
-// 					return nil, &utils.WrongUploadMode{Mode: mode}
-// 				}
-// 			}
-// 		}
-// 	}
-// }
+func UploadFile(srv *drive.Service, file_path, remote_path string, mode utils.UploadMode) (*File, utils.APIError) {
+	log.Debugf("UploadFile: %s to %s", file_path, remote_path)
+	if file, err := os.Open(file_path); err != nil {
+		return nil, &utils.OpenFileFailed{OSError: err, File: file_path}
+	} else {
+		defer file.Close()
+		parts := strings.Split(strings.Trim(file_path, "/"), "/")
+		file_name := parts[len(parts)-1]
+		if remote_folder, err := getFolder(srv, remote_path); err != nil {
+			return nil, err
+		} else {
+			if remote_file, err := getFileInFolderId(srv, file_name, remote_folder.Id, remote_path); err != nil {
+				switch err.(type) {
+				case *utils.FileNotFound:
+					return createNewRemoteFile(srv,
+						file_name,
+						remote_path,
+						&drive.File{
+							Name:    file_name,
+							Parents: []string{remote_folder.Id},
+						},
+						file,
+					)
+				default:
+					return nil, err
+				}
+			} else {
+				switch mode {
+				case utils.RaiseIfDuplicate:
+					return nil, &utils.DuplicateFile{File: file_name, Path: remote_path}
+				case utils.SkipDuplicates:
+					log.Warnf("File %s already exists in %s : skipping", file_name, remote_path)
+					return remote_file, nil
+				case utils.Overwrite:
+					log.Warnf("File %s already exists in %s : overwriting", file_name, remote_path)
+					return overwriteRemoteFile(
+						srv,
+						file_name,
+						remote_file.Id,
+						remote_path,
+						&drive.File{},
+						file,
+					)
+				default:
+					return nil, &utils.WrongUploadMode{Mode: mode}
+				}
+			}
+		}
+	}
+}
 
-// func getFileInFolderId(srv *drive.Service, file_name, folder_id, folder_name string) (*File, utils.APIError) {
-// 	if filelist, err := queryFiles(srv, fmt.Sprintf("name = '%s' and '%s' in parents and trashed = false", file_name, folder_id)); err != nil {
-// 		return nil, err
-// 	} else {
-// 		if len(filelist.Files) == 0 {
-// 			return nil, &utils.FileNotFound{DriveError: nil, File: file_name, Path: folder_name}
-// 		} else {
-// 			return &File{filelist.Files[0]}, nil
-// 		}
-// 	}
-// }
+func getFileInFolderId(srv *drive.Service, file_name, folder_id, folder_name string) (*File, utils.APIError) {
+	if filelist, err := queryFiles(srv, fmt.Sprintf("name = '%s' and '%s' in parents and trashed = false", file_name, folder_id)); err != nil {
+		return nil, err
+	} else {
+		if len(filelist) == 0 {
+			return nil, &utils.FileNotFound{DriveError: nil, File: file_name, Path: folder_name}
+		} else {
+			return filelist[0], nil
+		}
+	}
+}
 
-// func createNewRemoteFile(srv *drive.Service, file_name, remote_path string, metadata *drive.File, local_file *os.File) (*File, utils.APIError) {
-// 	if newfile, err := srv.Files.Create(metadata).
-// 		Media(local_file).
-// 		Fields("id").
-// 		Do(); err != nil {
-// 		return nil, &utils.CreateFailed{DriveError: err, File: file_name, Path: remote_path}
-// 	} else {
-// 		return &File{newfile}, nil
-// 	}
-// }
+func createNewRemoteFile(srv *drive.Service, file_name, remote_path string, metadata *drive.File, local_file *os.File) (*File, utils.APIError) {
+	if newfile, err := srv.Files.Create(metadata).
+		Media(local_file).
+		Fields("id").
+		Do(); err != nil {
+		return nil, &utils.CreateFailed{DriveError: err, File: file_name, Path: remote_path}
+	} else {
+		return &File{newfile}, nil
+	}
+}
 
-// func overwriteRemoteFile(srv *drive.Service, file_name, remote_file_id, remote_path string, metadata *drive.File, local_file *os.File) (*File, utils.APIError) {
-// 	if newfile, err := srv.Files.Update(remote_file_id, metadata).
-// 		Media(local_file).
-// 		Fields("id").
-// 		Do(); err != nil {
-// 		return nil, &utils.OverwriteFailed{DriveError: err, File: file_name, Path: remote_path}
-// 	} else {
-// 		return &File{newfile}, nil
-// 	}
-// }
+func overwriteRemoteFile(srv *drive.Service, file_name, remote_file_id, remote_path string, metadata *drive.File, local_file *os.File) (*File, utils.APIError) {
+	if newfile, err := srv.Files.Update(remote_file_id, metadata).
+		Media(local_file).
+		Fields("id").
+		Do(); err != nil {
+		return nil, &utils.OverwriteFailed{DriveError: err, File: file_name, Path: remote_path}
+	} else {
+		return &File{newfile}, nil
+	}
+}
