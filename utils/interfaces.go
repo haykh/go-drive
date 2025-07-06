@@ -13,6 +13,8 @@ import (
 
 type FileManager interface {
 	GetFileList(string, bool) ([]FileItem, error)
+
+	Synchronize(FileItem, bool) error
 }
 
 type FileItem interface {

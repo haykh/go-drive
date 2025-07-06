@@ -76,44 +76,48 @@ func UploadFile(srv *drive.Service, file_path, remote_path string, mode utils.Up
 		defer file.Close()
 		parts := strings.Split(strings.Trim(file_path, "/"), "/")
 		file_name := parts[len(parts)-1]
-		if remote_folder, err := getFolder(srv, remote_path); err != nil {
-			return nil, err
-		} else {
-			if remote_file, err := getFileInFolderId(srv, file_name, remote_folder.Id, remote_path); err != nil {
-				switch err.(type) {
-				case *utils.FileNotFound:
-					return createNewRemoteFile(srv,
-						file_name,
-						remote_path,
-						&drive.File{
-							Name:    file_name,
-							Parents: []string{remote_folder.Id},
-						},
-						file,
-					)
-				default:
-					return nil, err
-				}
+		remote_folder_id := "root"
+		if remote_path != "" && remote_path != "/" {
+			if remote_folder, err := getFolder(srv, remote_path); err != nil {
+				return nil, err
 			} else {
-				switch mode {
-				case utils.RaiseIfDuplicate:
-					return nil, &utils.DuplicateFile{File: file_name, Path: remote_path}
-				case utils.SkipDuplicates:
-					log.Warnf("File %s already exists in %s : skipping", file_name, remote_path)
-					return remote_file, nil
-				case utils.Overwrite:
-					log.Warnf("File %s already exists in %s : overwriting", file_name, remote_path)
-					return overwriteRemoteFile(
-						srv,
-						file_name,
-						remote_file.Id,
-						remote_path,
-						&drive.File{},
-						file,
-					)
-				default:
-					return nil, &utils.WrongUploadMode{Mode: mode}
-				}
+				remote_folder_id = remote_folder.Id
+			}
+		}
+		if remote_file, err := getFileInFolderId(srv, file_name, remote_folder_id, remote_path); err != nil {
+			switch err.(type) {
+			case *utils.FileNotFound:
+				return createNewRemoteFile(srv,
+					file_name,
+					remote_path,
+					&drive.File{
+						Name:    file_name,
+						Parents: []string{remote_folder_id},
+					},
+					file,
+				)
+			default:
+				return nil, err
+			}
+		} else {
+			switch mode {
+			case utils.RaiseIfDuplicate:
+				return nil, &utils.DuplicateFile{File: file_name, Path: remote_path}
+			case utils.SkipDuplicates:
+				log.Warnf("File %s already exists in %s : skipping", file_name, remote_path)
+				return remote_file, nil
+			case utils.Overwrite:
+				log.Warnf("File %s already exists in %s : overwriting", file_name, remote_path)
+				return overwriteRemoteFile(
+					srv,
+					file_name,
+					remote_file.Id,
+					remote_path,
+					&drive.File{},
+					file,
+				)
+			default:
+				return nil, &utils.WrongUploadMode{Mode: mode}
 			}
 		}
 	}

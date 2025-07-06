@@ -2,7 +2,6 @@ package local
 
 import (
 	"go-drive/utils"
-	"path/filepath"
 )
 
 var _ utils.FileItem = &File{}
@@ -16,7 +15,7 @@ type Manager struct {
 }
 
 func (m Manager) GetFileList(path string, debug_mode bool) ([]utils.FileItem, error) {
-	if local_filelist, err := getFolderContent(filepath.Join(m.Root, path)); err != nil {
+	if local_filelist, err := getFolderContent(m.Root, path); err != nil {
 		return nil, utils.ToHumanReadableError(err, debug_mode)
 	} else {
 		wrappedFiles := make([]utils.FileItem, len(local_filelist))
@@ -31,7 +30,8 @@ func (m Manager) GetFileList(path string, debug_mode bool) ([]utils.FileItem, er
  * File
  */
 type File struct {
-	Path         string
+	FullPath     string
+	RelativePath string
 	Name         string
 	Size         uint64
 	ModifiedTime string

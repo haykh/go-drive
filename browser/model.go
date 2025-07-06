@@ -3,7 +3,6 @@ package browser
 import (
 	"bytes"
 	"fmt"
-	"go-drive/filesystem"
 	"go-drive/utils"
 	"strings"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 )
 
 type Mode int
@@ -37,6 +37,10 @@ func (i browserItem) FilterValue() string { return "" }
 type doneLoadingMsg struct {
 	filelist []utils.FileItem
 	err      error
+}
+
+type errorMsg struct {
+	err error
 }
 
 type browserModel struct {
@@ -84,16 +88,13 @@ func (m browserModel) syncFile(file utils.FileItem) tea.Cmd {
 		m.spinner.Tick,
 		func() tea.Msg {
 			mgr := m.filemanager
-			if dv, ok := mgr.(filesystem.DualManager); ok {
-				if df, ok := file.(filesystem.DualFile); ok {
-					if err := dv.Synchronize(df, m.debug_mode); err != nil {
-						return err
-					}
-					filelist, err := mgr.GetFileList(m.CWD(), m.debug_mode)
-					return doneLoadingMsg{filelist, err}
+			if err := mgr.Synchronize(file, m.debug_mode); err != nil {
+				return errorMsg{
+					err: fmt.Errorf("failed to synchronize file %s: %w", file.GetName(), err),
 				}
 			}
-			return nil
+			filelist, err := mgr.GetFileList(m.CWD(), m.debug_mode)
+			return doneLoadingMsg{filelist, err}
 		},
 	)
 }
@@ -120,11 +121,11 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.loading = false
 
+	case errorMsg:
+		m.loading = false
+		log.Errorf("error loading file list: %s", msg.err.Error())
+
 	case spinner.TickMsg:
-		if m.loading {
-			m.spinner, cmd = m.spinner.Update(msg)
-			return m, cmd
-		}
 		if m.debug_mode {
 			data := m.debugBuffer.String()
 			m.debugBuffer.Reset()
@@ -136,6 +137,10 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(m.debugLines) > 40 {
 				m.debugLines = m.debugLines[len(m.debugLines)-40:]
 			}
+		}
+		if m.loading {
+			m.spinner, cmd = m.spinner.Update(msg)
+			return m, cmd
 		}
 
 	case tea.KeyMsg:
