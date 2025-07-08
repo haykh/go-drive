@@ -7,16 +7,30 @@ type doneLoadingMsg struct {
 	err      error
 }
 
-type doneSyncMsg struct {
+type syncStartMsg struct {
+	index int
+}
+
+type syncDoneMsg struct {
 	filelist []filesystem.FileItem
 	index    int
 	err      error
 }
-
-type syncFileMsg struct {
+type syncFailedMsg struct {
+	err   error
 	index int
 }
 
-type errorMsg struct {
-	err error
+type trashStartMsg struct {
+	index int
+}
+
+type trashDoneMsg struct {
+	filelist []filesystem.FileItem
+	index    int
+	err      error
+}
+type trashFailedMsg struct {
+	err   error
+	index int
 }

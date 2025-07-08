@@ -18,7 +18,7 @@ func FileBrowser(
 	debug_mode bool,
 	debugBuffer *bytes.Buffer,
 ) error {
-	l := list.New([]list.Item{}, itemRenderer{nil, []int{}, []string{}}, 20, 30)
+	l := list.New([]list.Item{}, itemRenderer{nil, []int{}, []int{}, []string{}}, 20, 30)
 	l.SetShowHelp(false)
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
@@ -27,10 +27,11 @@ func FileBrowser(
 		debug_mode: debug_mode,
 		format:     []string{},
 
-		cwd:         strings.Split(path, "/"),
-		filemanager: mgr,
-		filelist:    []filesystem.FileItem{},
-		filesinsync: []int{},
+		cwd:             strings.Split(path, "/"),
+		filemanager:     mgr,
+		filelist:        []filesystem.FileItem{},
+		filesinsync:     []int{},
+		filesintrashing: []int{},
 
 		help:    help.New(),
 		list:    l,

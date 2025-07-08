@@ -14,7 +14,7 @@ func getFolder(srv *drive.Service, remote_path string) (*File, utils.APIError) {
 	log.Debugf("getFolder: %s", remote_path)
 	parentID := "root"
 	parts := strings.Split(strings.Trim(remote_path, "/"), "/")
-	var drive_file *drive.File
+	var drive_folder *drive.File
 
 	for _, part := range parts {
 		query := fmt.Sprintf("name = '%s' and mimeType = 'application/vnd.google-apps.folder' and '%s' in parents and trashed = false", part, parentID)
@@ -25,12 +25,11 @@ func getFolder(srv *drive.Service, remote_path string) (*File, utils.APIError) {
 				return nil, &utils.FolderNotFound{DriveError: err, Path: remote_path}
 			} else {
 				parentID = folder_obj.Files[0].Id
-				drive_file = folder_obj.Files[0]
+				drive_folder = folder_obj.Files[0]
 			}
 		}
 	}
-
-	return &File{drive_file}, nil
+	return &File{drive_folder}, nil
 }
 
 func getFolderContent(srv *drive.Service, remote_path string) ([]*File, utils.APIError) {
@@ -47,16 +46,26 @@ func getFolderContent(srv *drive.Service, remote_path string) ([]*File, utils.AP
 }
 
 func queryFiles(srv *drive.Service, query string) ([]*File, utils.APIError) {
-	if filelist, err := srv.Files.List().Q(query).Fields("files(id, name, mimeType, ownedByMe, modifiedTime, size)").Do(); err != nil {
-		return nil, &utils.QueryFailed{DriveError: err, Query: query}
-	} else {
-		files := filelist.Files
-		wrappedFiles := make([]*File, len(files))
-		for i, f := range files {
-			wrappedFiles[i] = &File{f}
+	var all_files []*File
+	page_token := ""
+	for {
+		request := srv.Files.List().Q(query).Fields("nextPageToken, files(id, name, mimeType, ownedByMe, modifiedTime, size, md5Checksum)")
+		if page_token != "" {
+			request = request.PageToken(page_token)
 		}
-		return wrappedFiles, nil
+		if filelist, err := request.Do(); err != nil {
+			return nil, &utils.QueryFailed{DriveError: err, Query: query}
+		} else {
+			for _, f := range filelist.Files {
+				all_files = append(all_files, &File{f})
+			}
+			if filelist.NextPageToken == "" {
+				break
+			}
+			page_token = filelist.NextPageToken
+		}
 	}
+	return all_files, nil
 }
 
 // func getFile(srv *drive.Service, file_name, remote_path string) (*File, utils.APIError) {
@@ -67,61 +76,6 @@ func queryFiles(srv *drive.Service, query string) ([]*File, utils.APIError) {
 // 		return getFileInFolderId(srv, file_name, folder.Id, remote_path)
 // 	}
 // }
-
-func UploadFile(srv *drive.Service, file_path, remote_path string, mode utils.UploadMode) (*File, utils.APIError) {
-	log.Debugf("UploadFile: %s to %s", file_path, remote_path)
-	if file, err := os.Open(file_path); err != nil {
-		return nil, &utils.OpenFileFailed{OSError: err, File: file_path}
-	} else {
-		defer file.Close()
-		parts := strings.Split(strings.Trim(file_path, "/"), "/")
-		file_name := parts[len(parts)-1]
-		remote_folder_id := "root"
-		if remote_path != "" && remote_path != "/" {
-			if remote_folder, err := getFolder(srv, remote_path); err != nil {
-				return nil, err
-			} else {
-				remote_folder_id = remote_folder.Id
-			}
-		}
-		if remote_file, err := getFileInFolderId(srv, file_name, remote_folder_id, remote_path); err != nil {
-			switch err.(type) {
-			case *utils.FileNotFound:
-				return createNewRemoteFile(srv,
-					file_name,
-					remote_path,
-					&drive.File{
-						Name:    file_name,
-						Parents: []string{remote_folder_id},
-					},
-					file,
-				)
-			default:
-				return nil, err
-			}
-		} else {
-			switch mode {
-			case utils.RaiseIfDuplicate:
-				return nil, &utils.DuplicateFile{File: file_name, Path: remote_path}
-			case utils.SkipDuplicates:
-				log.Warnf("File %s already exists in %s : skipping", file_name, remote_path)
-				return remote_file, nil
-			case utils.Overwrite:
-				log.Warnf("File %s already exists in %s : overwriting", file_name, remote_path)
-				return overwriteRemoteFile(
-					srv,
-					file_name,
-					remote_file.Id,
-					remote_path,
-					&drive.File{},
-					file,
-				)
-			default:
-				return nil, &utils.WrongUploadMode{Mode: mode}
-			}
-		}
-	}
-}
 
 func getFileInFolderId(srv *drive.Service, file_name, folder_id, folder_name string) (*File, utils.APIError) {
 	if filelist, err := queryFiles(srv, fmt.Sprintf("name = '%s' and '%s' in parents and trashed = false", file_name, folder_id)); err != nil {
@@ -155,4 +109,73 @@ func overwriteRemoteFile(srv *drive.Service, file_name, remote_file_id, remote_p
 	} else {
 		return &File{newfile}, nil
 	}
+}
+
+func ensureFolderPath(srv *drive.Service, path string) (*drive.File, utils.APIError) {
+	parts := strings.Split(path, "/")
+	parentID := "root"
+	var drive_folder *drive.File
+
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		q := fmt.Sprintf("mimeType='application/vnd.google-apps.folder' and name='%s' and '%s' in parents and trashed=false", part, parentID)
+		r, err := srv.Files.List().Q(q).Fields("files(id, name)").Do()
+		if err != nil {
+			return nil, &utils.QueryFailed{DriveError: err, Query: q}
+		}
+
+		if len(r.Files) > 0 {
+			drive_folder = r.Files[0]
+			parentID = r.Files[0].Id
+		} else {
+			f := &drive.File{
+				Name:     part,
+				MimeType: "application/vnd.google-apps.folder",
+			}
+			if parentID != "" {
+				f.Parents = []string{parentID}
+			}
+			created, err := srv.Files.Create(f).Do()
+			if err != nil {
+				return nil, &utils.CreateFailed{
+					DriveError: err,
+					File:       part,
+					Path:       path,
+				}
+			}
+			drive_folder = created
+			parentID = created.Id
+		}
+	}
+	return drive_folder, nil
+}
+
+func moveFileById(srv *drive.Service, fileID, newParentID string) (*drive.File, utils.APIError) {
+	file, err := srv.Files.Get(fileID).Fields("parents").Do()
+	if err != nil {
+		return nil, &utils.FileNotFound{
+			DriveError: err,
+			File:       fileID,
+			Path:       "",
+		}
+	}
+
+	oldParents := strings.Join(file.Parents, ",")
+
+	new_file, err := srv.Files.Update(fileID, nil).
+		AddParents(newParentID).
+		RemoveParents(oldParents).
+		Fields("id, parents").
+		Do()
+
+	if err != nil {
+		return nil, &utils.CreateFailed{
+			DriveError: err,
+			File:       file.Name,
+			Path:       newParentID,
+		}
+	}
+	return new_file, nil
 }

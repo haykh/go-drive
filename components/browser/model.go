@@ -23,10 +23,11 @@ type browserModel struct {
 	format     []string
 
 	// model state
-	cwd         []string
-	filemanager filesystem.FileManager
-	filelist    []filesystem.FileItem
-	filesinsync []int
+	cwd             []string
+	filemanager     filesystem.FileManager
+	filelist        []filesystem.FileItem
+	filesinsync     []int
+	filesintrashing []int
 
 	// ui components
 	help    help.Model
@@ -58,7 +59,7 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case doneLoadingMsg:
 		m.filelist = msg.filelist
-		m.list.SetDelegate(itemRenderer{m.filelist, m.filesinsync, m.cwd})
+		m.list.SetDelegate(itemRenderer{m.filelist, m.filesinsync, m.filesintrashing, m.cwd})
 		m.list.SetItems(FileListToItems(m.filelist))
 		m.list.Title = m.CWD()
 		if m.list.Title == "" {
@@ -66,13 +67,14 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.loading = false
 
-	case syncFileMsg:
+	case syncStartMsg:
 		if !slices.Contains(m.filesinsync, msg.index) {
 			m.filesinsync = append(m.filesinsync, msg.index)
 		}
-		m.list.SetDelegate(itemRenderer{m.filelist, m.filesinsync, m.cwd})
+		m.loading = true
+		m.list.SetDelegate(itemRenderer{m.filelist, m.filesinsync, m.filesintrashing, m.cwd})
 
-	case doneSyncMsg:
+	case syncDoneMsg:
 		m.filelist = msg.filelist
 		for i, idx := range m.filesinsync {
 			if idx == msg.index {
@@ -80,17 +82,44 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				break
 			}
 		}
-		m.list.SetDelegate(itemRenderer{m.filelist, m.filesinsync, m.cwd})
+		m.list.SetDelegate(itemRenderer{m.filelist, m.filesinsync, m.filesintrashing, m.cwd})
 		m.list.SetItems(FileListToItems(m.filelist))
-		m.list.Title = m.CWD()
-		if m.list.Title == "" {
-			m.list.Title = "/"
-		}
-		m.loading = false
 
-	case errorMsg:
-		m.loading = false
-		log.Errorf("error loading file list: %s", msg.err.Error())
+	case syncFailedMsg:
+		for i, idx := range m.filesinsync {
+			if idx == msg.index {
+				m.filesinsync = append(m.filesinsync[:i], m.filesinsync[i+1:]...)
+				break
+			}
+		}
+		log.Errorf("error: %s", msg.err.Error())
+
+	case trashStartMsg:
+		if !slices.Contains(m.filesintrashing, msg.index) {
+			m.filesintrashing = append(m.filesintrashing, msg.index)
+		}
+		m.loading = true
+		m.list.SetDelegate(itemRenderer{m.filelist, m.filesinsync, m.filesintrashing, m.cwd})
+
+	case trashDoneMsg:
+		m.filelist = msg.filelist
+		for i, idx := range m.filesintrashing {
+			if idx == msg.index {
+				m.filesintrashing = append(m.filesintrashing[:i], m.filesintrashing[i+1:]...)
+				break
+			}
+		}
+		m.list.SetDelegate(itemRenderer{m.filelist, m.filesinsync, m.filesintrashing, m.cwd})
+		m.list.SetItems(FileListToItems(m.filelist))
+
+	case trashFailedMsg:
+		for i, idx := range m.filesintrashing {
+			if idx == msg.index {
+				m.filesintrashing = append(m.filesintrashing[:i], m.filesintrashing[i+1:]...)
+				break
+			}
+		}
+		log.Errorf("error: %s", msg.err.Error())
 
 	case spinner.TickMsg:
 		if m.debug_mode {
@@ -112,17 +141,11 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, m.keys.Quit):
-			m.quitting = true
-			return m, tea.Quit
 
 		case key.Matches(msg, m.keys.Root):
 			if len(m.cwd) > 0 {
 				return m.changeDirectory([]string{})
 			}
-
-		case key.Matches(msg, m.keys.Help):
-			m.help.ShowAll = !m.help.ShowAll
 
 		case key.Matches(msg, m.keys.Backspace):
 			if len(m.cwd) > 0 {
@@ -141,13 +164,37 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if _, ok := m.list.SelectedItem().(browserItem); ok {
 				file := m.filelist[m.list.Index()]
 				if !file.IsDirectory() {
-					m.loading = true
-					m.status = fmt.Sprintf("syncing %s...", file.GetName())
 					return m, m.syncFile(m.list.Index(), file)
 				}
 			}
 			return m, nil
+
+		case key.Matches(msg, m.keys.Trash):
+			if _, ok := m.list.SelectedItem().(browserItem); ok {
+				file := m.filelist[m.list.Index()]
+				if !file.IsDirectory() {
+					return m, m.trashFile(m.list.Index(), file)
+				}
+			}
+			return m, nil
+
+		case key.Matches(msg, m.keys.Quit):
+			m.quitting = true
+			return m, tea.Quit
+
+		case key.Matches(msg, m.keys.Help):
+			m.help.ShowAll = !m.help.ShowAll
 		}
+	}
+
+	if len(m.filesinsync) == 0 {
+		m.list.Title = m.CWD()
+		if m.list.Title == "" {
+			m.list.Title = "/"
+		}
+		m.loading = false
+	} else {
+		m.status = fmt.Sprintf("synchronizing %d files...", len(m.filesinsync))
 	}
 
 	m.list, cmd = m.list.Update(msg)

@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"fmt"
 	"go-drive/components/browser"
 	"go-drive/components/spinner"
 	"go-drive/filesystem"
@@ -14,15 +15,38 @@ import (
 	"google.golang.org/api/drive/v3"
 )
 
-func DualLs(srv *drive.Service, local_root, dir string, debug_mode bool) error {
-	mgr := dual.DualManager{
-		LocalManager:  &local.Manager{Root: local_root},
-		RemoteManager: &remote.Manager{Srv: srv},
+type LSMode int
+
+const (
+	LSDual LSMode = iota
+	LSRemote
+	LSLocal
+)
+
+func ListFiles(srv *drive.Service, ls_mode LSMode, local_root, dir string, debug_mode bool) error {
+	var loader func() (any, error)
+	switch ls_mode {
+	case LSRemote:
+		loader = func() (any, error) {
+			return remote.Manager{Srv: srv}.GetFileList(dir, debug_mode)
+		}
+	case LSLocal:
+		loader = func() (any, error) {
+			return local.Manager{Root: local_root}.GetFileList(dir, debug_mode)
+		}
+	case LSDual:
+		loader = func() (any, error) {
+			mgr := dual.DualManager{
+				LocalManager:  &local.Manager{Root: local_root},
+				RemoteManager: &remote.Manager{Srv: srv},
+			}
+			return mgr.GetFileList(dir, debug_mode)
+		}
+	default:
+		return fmt.Errorf("invalid LSMode: %v", ls_mode)
 	}
 	if content, err := spinner.RunWithSpinner(
-		func() (any, error) {
-			return mgr.GetFileList(dir, debug_mode)
-		},
+		loader,
 		"loading",
 		"unable to get local or remote content",
 		"",
@@ -35,6 +59,22 @@ func DualLs(srv *drive.Service, local_root, dir string, debug_mode bool) error {
 		return nil
 	}
 }
+
+// func RemoteLs(srv *drive.Service, local_root, dir string, debug_mode bool) error {
+// 	if content, err := spinner.RunWithSpinner(
+// 		,
+// 		"loading",
+// 		"unable to get remote content",
+// 		"",
+// 		debug_mode,
+// 	); err != nil {
+// 		return err
+// 	} else {
+// 		itemlist, _ := content.([]filesystem.FileItem)
+// 		log.Print(strings.Join(filesystem.StringizeAll(itemlist, dir), "\n"))
+// 		return nil
+// 	}
+// }
 
 // func RemoteFileBrowser(srv *drive.Service, dir string, debug_mode bool) error {
 // 	return browser.FileBrowser(&remote.Manager{Srv: srv}, dir, debug_mode)

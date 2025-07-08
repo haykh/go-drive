@@ -16,6 +16,7 @@ import (
 type itemRenderer struct {
 	filelist []filesystem.FileItem
 	syncing  []int
+	trashing []int
 	cwd      []string
 }
 
@@ -28,8 +29,9 @@ func (d itemRenderer) Spacing() int                            { return 0 }
 func (d itemRenderer) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 func (d itemRenderer) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
 	is_syncing := slices.Contains(d.syncing, index)
+	is_trashing := slices.Contains(d.trashing, index)
 	is_hovered := m.Index() == index
-	str := filesystem.Stringize(d.filelist[index], d.CWD(), is_hovered, is_syncing)
+	str := filesystem.Stringize(d.filelist[index], d.CWD(), is_hovered, is_syncing, is_trashing)
 
 	fn := ui.BrowserItem.Render
 	if index == m.Index() {

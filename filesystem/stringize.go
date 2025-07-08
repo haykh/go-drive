@@ -23,7 +23,7 @@ type column struct {
 	pos   lipgloss.Position
 }
 
-func Stringize(f FileItem, path string, selected, syncing bool) string {
+func Stringize(f FileItem, path string, selected, syncing, trashing bool) string {
 	om := orderedmap.New[string, column]()
 	om.Set("sync", column{2, lipgloss.Left})
 	om.Set("icon", column{2, lipgloss.Left})
@@ -55,24 +55,25 @@ func Stringize(f FileItem, path string, selected, syncing bool) string {
 			}
 
 		case "sync":
-			if syncing {
-				symbol = ui.StatusIcons["syncing"]
-				style = ui.SyncingStyle
-			} else if f.IsRemote() && f.IsLocal() {
-				if f.IsDirectory() {
-					symbol = " "
-				} else {
+			if !f.IsDirectory() {
+				if trashing {
+					symbol = ui.StatusIcons["trashing"]
+					style = ui.SyncingStyle
+				} else if syncing {
+					symbol = ui.StatusIcons["syncing"]
+					style = ui.SyncingStyle
+				} else if f.InSync() {
 					symbol = ui.StatusIcons["synced"]
 					style = ui.SyncedStyle
+				} else if f.ShouldUpload() {
+					symbol = ui.StatusIcons["local"]
+					style = ui.LocalStyle
+				} else if f.ShouldDownload() {
+					symbol = ui.StatusIcons["remote"]
+					style = ui.RemoteStyle
+				} else {
+					panic("file is not in sync, but does not require upload or download")
 				}
-			} else if f.IsRemote() {
-				symbol = ui.StatusIcons["remote"]
-				style = ui.RemoteStyle
-			} else if f.IsLocal() {
-				symbol = ui.StatusIcons["local"]
-				style = ui.LocalStyle
-			} else {
-				panic("file is neither remote nor local")
 			}
 
 		case "name":
@@ -111,7 +112,7 @@ func Stringize(f FileItem, path string, selected, syncing bool) string {
 func StringizeAll(f []FileItem, path string) []string {
 	items := make([]string, len(f))
 	for i, item := range f {
-		items[i] = Stringize(item, path, false, false)
+		items[i] = Stringize(item, path, false, false, false)
 	}
 	return items
 }

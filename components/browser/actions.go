@@ -26,17 +26,38 @@ func (m browserModel) syncFile(index int, file filesystem.FileItem) tea.Cmd {
 	return tea.Batch(
 		m.spinner.Tick,
 		func() tea.Msg {
-			return syncFileMsg{index: index}
+			return syncStartMsg{index: index}
 		},
 		func() tea.Msg {
 			mgr := m.filemanager
-			if err := mgr.Synchronize(file, m.debug_mode); err != nil {
-				return errorMsg{
-					err: fmt.Errorf("failed to synchronize file %s: %w", file.GetName(), err),
+			if err := mgr.Synchronize(file, m.CWD(), m.debug_mode); err != nil {
+				return syncFailedMsg{
+					index: index,
+					err:   fmt.Errorf("failed to synchronize file %s: %w", file.GetName(), err),
 				}
 			}
 			filelist, err := mgr.GetFileList(m.CWD(), m.debug_mode)
-			return doneSyncMsg{filelist, index, err}
+			return syncDoneMsg{filelist, index, err}
+		},
+	)
+}
+
+func (m browserModel) trashFile(index int, file filesystem.FileItem) tea.Cmd {
+	return tea.Batch(
+		m.spinner.Tick,
+		func() tea.Msg {
+			return trashStartMsg{index: index}
+		},
+		func() tea.Msg {
+			mgr := m.filemanager
+			if err := mgr.Trash(file, m.CWD(), m.debug_mode); err != nil {
+				return trashFailedMsg{
+					index: index,
+					err:   fmt.Errorf("failed to trash file %s: %w", file.GetName(), err),
+				}
+			}
+			filelist, err := mgr.GetFileList(m.CWD(), m.debug_mode)
+			return trashDoneMsg{filelist, index, err}
 		},
 	)
 }

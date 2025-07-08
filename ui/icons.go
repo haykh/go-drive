@@ -35,11 +35,12 @@ var MimeIcons = map[string]string{
 }
 
 var StatusIcons = map[string]string{
-	"synced":  "󰅟",
-	"remote":  "",
-	"local":   "",
-	"syncing": "󰘿",
-	"shared":  "",
+	"synced":   "󰅟",
+	"remote":   "",
+	"local":    "",
+	"syncing":  "󰘿",
+	"trashing": "x",
+	"shared":   "",
 }
 
 var (

@@ -44,6 +44,20 @@ func (e *ParseCredentialsFailed) HumanReadableError(debug bool) error {
 	}
 }
 
+type DownloadFailed struct {
+	DriveError error
+	File       string
+}
+
+func (e *DownloadFailed) HumanReadableError(debug bool) error {
+	log.Errorf("DownloadFailed: %s", e.File)
+	if debug {
+		return e.DriveError
+	} else {
+		return nil
+	}
+}
+
 type AuthTokenFailed struct {
 	DriveError error
 	AuthCode   string
@@ -189,6 +203,20 @@ func (e *WriteFileFailed) HumanReadableError(debug bool) error {
 	}
 }
 
+type CreateDirFailed struct {
+	OSError error
+	Dir     string
+}
+
+func (e *CreateDirFailed) HumanReadableError(debug bool) error {
+	log.Errorf("CreateDirFailed: %s", e.Dir)
+	if debug {
+		return e.OSError
+	} else {
+		return nil
+	}
+}
+
 type ReadFileInfoFailed struct {
 	OSError error
 	File    string
@@ -218,6 +246,48 @@ func (e *OpenFileFailed) HumanReadableError(debug bool) error {
 	}
 }
 
+type RemoveFileFailed struct {
+	OSError error
+	File    string
+}
+
+func (e *RemoveFileFailed) HumanReadableError(debug bool) error {
+	log.Errorf("RemoveFileFailed: %s", e.File)
+	if debug {
+		return e.OSError
+	} else {
+		return nil
+	}
+}
+
+type CopyFileFailed struct {
+	OSError error
+	File    string
+}
+
+func (e *CopyFileFailed) HumanReadableError(debug bool) error {
+	log.Errorf("CopyFileFailed: %s", e.File)
+	if debug {
+		return e.OSError
+	} else {
+		return nil
+	}
+}
+
+type ChtimeFailed struct {
+	OSError error
+	File    string
+}
+
+func (e *ChtimeFailed) HumanReadableError(debug bool) error {
+	log.Errorf("ChtimeFailed: %s", e.File)
+	if debug {
+		return e.OSError
+	} else {
+		return nil
+	}
+}
+
 type ReadFileFailed struct {
 	OSError error
 	File    string
@@ -239,6 +309,20 @@ type MimeTypeFailed struct {
 
 func (e *MimeTypeFailed) HumanReadableError(debug bool) error {
 	log.Errorf("MimeTypeFailed: %s", e.File)
+	if debug {
+		return e.OSError
+	} else {
+		return nil
+	}
+}
+
+type Md5Failed struct {
+	OSError error
+	File    string
+}
+
+func (e *Md5Failed) HumanReadableError(debug bool) error {
+	log.Errorf("Md5Failed: %s", e.File)
 	if debug {
 		return e.OSError
 	} else {
@@ -315,14 +399,14 @@ func (e *JSONUnmarshalFailed) HumanReadableError(debug bool) error {
 }
 
 // Internal logic errors
-type WrongUploadMode struct {
-	Mode UploadMode
+type WrongSyncMode struct {
+	Mode SyncMode
 }
 
-func (e *WrongUploadMode) HumanReadableError(debug bool) error {
-	log.Errorf("WrongUploadMode: %v", e.Mode)
+func (e *WrongSyncMode) HumanReadableError(debug bool) error {
+	log.Errorf("WrongSyncMode: %v", e.Mode)
 	if debug {
-		return fmt.Errorf("WrongUploadMode: %v", e.Mode)
+		return fmt.Errorf("WrongSyncMode: %v", e.Mode)
 	} else {
 		return nil
 	}

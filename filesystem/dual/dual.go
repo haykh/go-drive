@@ -5,6 +5,7 @@ import (
 	"go-drive/filesystem"
 	"go-drive/filesystem/local"
 	"go-drive/filesystem/remote"
+	"time"
 
 	"github.com/charmbracelet/log"
 )
@@ -39,7 +40,7 @@ func (m DualManager) GetFileList(path string, debug_mode bool) ([]filesystem.Fil
 			LocalFile:  nil,
 		}
 		for lidx, local_file := range local_filelist {
-			if (remote_file.GetName() == local_file.GetName()) && (remote_file.IsDirectory() == local_file.IsDirectory()) {
+			if remote_file.GetName() == local_file.GetName() && (remote_file.IsDirectory() == local_file.IsDirectory()) {
 				dual_file.LocalFile = local_file.(*local.File)
 				local_filelist = append(local_filelist[:lidx], local_filelist[lidx+1:]...)
 				break
@@ -115,6 +116,8 @@ func (f DualFile) IsRemote() bool {
 func (f DualFile) GetName() string {
 	switch {
 	case f.RemoteFile != nil && f.LocalFile != nil:
+		// return fmt.Sprintf("%s | %s", f.RemoteFile.Md5Checksum, f.LocalFile.Md5Checksum)
+		// return fmt.Sprintf("%s | %s", f.RemoteFile.GetModifiedTime().Format("2006-01-02 15:04:05"), f.LocalFile.GetModifiedTime().Format("2006-01-02 15:04:05"))
 		if f.RemoteFile.GetName() != f.LocalFile.GetName() {
 			panic("remote and local files disagree on name")
 		}
@@ -149,8 +152,16 @@ func (f DualFile) GetMimeType() string {
 	}
 }
 
-func (f DualFile) GetModifiedTime() string {
+func (f DualFile) GetModifiedTime() time.Time {
 	switch {
+	case f.RemoteFile != nil && f.LocalFile != nil:
+		if f.RemoteFile.GetModifiedTime() != f.LocalFile.GetModifiedTime() {
+			return time.Time{}
+		} else {
+			return f.RemoteFile.GetModifiedTime()
+		}
+		// return f.RemoteFile.GetModifiedTime() - f.LocalFile.GetModifiedTime()
+		// fmt.Sprintf("%s | %s", f.RemoteFile.GetModifiedTime(), f.LocalFile.GetModifiedTime())
 	case f.RemoteFile != nil:
 		return f.RemoteFile.GetModifiedTime()
 	case f.LocalFile != nil:

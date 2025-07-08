@@ -57,7 +57,7 @@ func main() {
 		&cli.StringFlag{
 			Name:    "local",
 			Aliases: []string{"l"},
-			Value:   filepath.Join(home, ".config", "godrive", "storage"),
+			Value:   filepath.Join(home, "Documents", "GoDrive"),
 			Usage:   "path to the local mirror storage",
 		},
 		&cli.BoolFlag{
@@ -87,7 +87,13 @@ func main() {
 			{
 				Name:  "ls",
 				Usage: "list content of the remote directory",
-				Flags: common_flags,
+				Flags: append(
+					common_flags,
+					&cli.BoolFlag{
+						Name:    "remote",
+						Aliases: []string{"r"},
+						Usage:   "list remote files only",
+					}),
 				Action: func(ctx context.Context, c *cli.Command) error {
 					debug_mode := c.Bool("debug")
 					initLogger(debug_mode, false)
@@ -98,7 +104,11 @@ func main() {
 					if srv, err := api.GetGoogleDriveService(ctx, c.String("credentials"), c.String("token"), drive.DriveScope, false); err != nil {
 						return utils.ToHumanReadableError(err, debug_mode)
 					} else {
-						return api.DualLs(srv, c.String("local"), dir, debug_mode)
+						ls_mode := api.LSDual
+						if c.Bool("remote") {
+							ls_mode = api.LSRemote
+						}
+						return api.ListFiles(srv, ls_mode, c.String("local"), dir, debug_mode)
 					}
 				},
 			},

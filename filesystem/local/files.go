@@ -3,6 +3,7 @@ package local
 import (
 	"go-drive/filesystem"
 	"go-drive/utils"
+	"time"
 )
 
 var _ filesystem.FileItem = &File{}
@@ -35,8 +36,9 @@ type File struct {
 	RelativePath string
 	Name         string
 	Size         uint64
-	ModifiedTime string
+	ModifiedTime time.Time
 	MimeType     string
+	Md5Checksum  string
 }
 
 func (f File) IsDirectory() bool {
@@ -67,7 +69,7 @@ func (f File) GetSize() uint64 {
 	return f.Size
 }
 
-func (f File) GetModifiedTime() string {
+func (f File) GetModifiedTime() time.Time {
 	return f.ModifiedTime
 }
 

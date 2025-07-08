@@ -4,6 +4,7 @@ import (
 	"go-drive/filesystem"
 	"go-drive/ui"
 	"go-drive/utils"
+	"time"
 
 	"google.golang.org/api/drive/v3"
 )
@@ -73,8 +74,13 @@ func (f File) GetMimeType() string {
 	return f.MimeType
 }
 
-func (f File) GetModifiedTime() string {
-	return f.ModifiedTime
+func (f File) GetModifiedTime() time.Time {
+	t, err := time.Parse(time.RFC3339, f.ModifiedTime)
+	if err != nil {
+		panic(err)
+	} else {
+		return t
+	}
 }
 
 func (f File) GetOwnedByMe() bool {

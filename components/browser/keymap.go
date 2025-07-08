@@ -10,9 +10,10 @@ type keyMap struct {
 	Select    key.Binding
 	Home      key.Binding
 	End       key.Binding
-	Sync      key.Binding
 	Backspace key.Binding
 	Root      key.Binding
+	Sync      key.Binding
+	Trash     key.Binding
 	Help      key.Binding
 	Quit      key.Binding
 }
@@ -25,7 +26,7 @@ func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Left, k.Right, k.Select},
 		{k.Home, k.End, k.Backspace, k.Root},
-		{k.Sync, k.Help, k.Quit},
+		{k.Sync, k.Trash, k.Help, k.Quit},
 	}
 }
 
@@ -69,6 +70,10 @@ var keys = keyMap{
 	Sync: key.NewBinding(
 		key.WithKeys("s"),
 		key.WithHelp("s", "synchronize"),
+	),
+	Trash: key.NewBinding(
+		key.WithKeys("t"),
+		key.WithHelp("t", "trash"),
 	),
 	Help: key.NewBinding(
 		key.WithKeys("?"),

@@ -1,9 +1,9 @@
 package utils
 
-type UploadMode int
+type SyncMode int
 
 const (
-	RaiseIfDuplicate UploadMode = iota
+	RaiseIfDuplicate SyncMode = iota
 	SkipDuplicates
 	Overwrite
 )
